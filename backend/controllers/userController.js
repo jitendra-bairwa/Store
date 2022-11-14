@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const User = require("../models/userModel")
 const jwt = require("jsonwebtoken")
+const bcrypt = require('bcrypt');
 
 // Generate Token
 const generateToken = (id) => {
@@ -43,15 +44,15 @@ const registerUser = asyncHandler(async (req, res) => {
     //   Generate Token
     const token = generateToken(user._id);
 
-//  Send HTTP-only cookie
-   res.cookie("TOKEN_GENETATED",token,{
-    path:"/",
-    httpOnly:true,
-    expires:new Date(Date.now() + 1000*86400), //1 day
-    sameSite:"none",
-    secure:true,
+    //  Send HTTP-only cookie
+    res.cookie("TOKEN_GENETATED", token, {
+        path: "/",
+        httpOnly: true,
+        expires: new Date(Date.now() + 1000 * 86400), //1 day
+        sameSite: "none",
+        secure: true,
 
-   });
+    });
 
     if (user) {
         const { _id, name, email, password, photo, phone, bio } = user;
@@ -59,7 +60,8 @@ const registerUser = asyncHandler(async (req, res) => {
             _id, name, email, password, photo, phone, bio, token,
         })
     }
-    else {
+    else 
+    {
         res.status(400);
         throw new Error("Invalid user data");
     }
@@ -67,6 +69,68 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 
+const loginUser = asyncHandler(async (req, res) => {
+
+    const { email, password } = req.body;
+
+    // Validate Request
+    if (!email || !password) {
+        res.status(400);
+        throw new Error("Please fill email and password");
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+        res.status(400);
+        throw new Error("User not Found");
+    }
+
+    // User exists , check if password is correct
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+    //   Generate Token
+    const token = generateToken(user._id);
+
+    //  Send HTTP-only cookie
+    res.cookie("TOKEN_GENETATED", token, {
+        path: "/",
+        httpOnly: true,
+        expires: new Date(Date.now() + 1000 * 86400), //1 day
+        sameSite: "none",
+        secure: true,
+
+    });
+
+
+    if (user && isPasswordCorrect) {
+        const { _id, name, email, password, photo, phone, bio } = user;
+
+        res.status(200).json({
+            _id, name, email, password, photo, phone, bio, token,
+        });
+    }
+    else {
+        res.status(400);
+        throw new Error("Invalid Email or Password");
+    }
+
+});
+
+const logout = asyncHandler(async (req, res) => {
+    res.cookie("TOKEN_GENETATED", "", {
+        path: "/",
+        httpOnly: true,
+        expires: new Date(0),
+        sameSite: "none",
+        secure: true,
+    });
+    return res.status(200).json({message:"Successfully Logged out"});
+});
+
+
 module.exports = {
     registerUser,
+    loginUser,
+    logout,
 }
