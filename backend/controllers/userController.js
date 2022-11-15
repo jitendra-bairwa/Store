@@ -51,7 +51,6 @@ const registerUser = asyncHandler(async (req, res) => {
         expires: new Date(Date.now() + 1000 * 86400), //1 day
         sameSite: "none",
         secure: true,
-
     });
 
     if (user) {
@@ -60,15 +59,14 @@ const registerUser = asyncHandler(async (req, res) => {
             _id, name, email, password, photo, phone, bio, token,
         })
     }
-    else 
-    {
+    else {
         res.status(400);
         throw new Error("Invalid user data");
     }
 
 });
 
-
+// Login User
 const loginUser = asyncHandler(async (req, res) => {
 
     const { email, password } = req.body;
@@ -125,7 +123,47 @@ const logout = asyncHandler(async (req, res) => {
         sameSite: "none",
         secure: true,
     });
-    return res.status(200).json({message:"Successfully Logged out"});
+    return res.status(200).json({ message: "Successfully Logged out" });
+});
+
+
+// Get User Data
+const getUser = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+        const { _id, name, email, photo, phone, bio } = user;
+        res.status(200).json({
+            _id,
+            name,
+            email,
+            photo,
+            phone,
+            bio,
+        });
+    } else {
+        res.status(400);
+        throw new Error("User Not Found");
+    }
+});
+
+
+// Get Login Status
+const loginStatus = asyncHandler(async (req, res) => {
+    const token = req.cookies.TOKEN_GENETATED;
+    if(!token)
+    {
+        return res.json(false);
+    }
+
+    // Verify Token
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    if(verified)
+    {
+        return res.json(true);
+    }
+    return res.json(false);
+
 });
 
 
@@ -133,4 +171,6 @@ module.exports = {
     registerUser,
     loginUser,
     logout,
+    getUser,
+    loginStatus,
 }
